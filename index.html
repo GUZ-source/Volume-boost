@@ -156,26 +156,27 @@
 </div>
 
 <script>
-    const fileInput = document.getElementById('fileInput'), dropzone = document.getElementById('dropzone'), workspace = document.getElementById('workspace'), gainSlider = document.getElementById('gainSlider'), btnDownload = document.getElementById('btnDownload');
-    let rawJson = null, originalName = "";
+   <script>
+    // 1. Garantir que tudo carregue antes de aplicar os eventos
+    document.addEventListener('DOMContentLoaded', () => {
+        const proMode = document.getElementById('proMode');
+        const proPanel = document.getElementById('proPanel');
+        const headSlider = document.getElementById('headSlider');
+        const loudSlider = document.getElementById('loudSlider');
+        
+        // Evento do Checkbox
+        proMode.addEventListener('change', () => {
+            proPanel.style.display = proMode.checked ? 'block' : 'none';
+        });
 
-    dropzone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
-    gainSlider.addEventListener('input', updateCalculations);
-
-    function handleFile(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => { rawJson = JSON.parse(e.target.result); originalName = file.name; dropzone.style.display = 'none'; workspace.style.display = 'block'; updateCalculations(); };
-        reader.readAsText(file);
-    }
-
-    function updateCalculations() {
-        const db = parseFloat(gainSlider.value);
-        const factor = Math.pow(10, db / 20);
-        document.getElementById('uiGainText').textContent = `${db > 0 ? "+" : ""}${db.toFixed(1)} dB`;
-        // (Lógica de exibição simplificada para o teste)
-    }
-
+        // Atualizadores visuais
+        headSlider.addEventListener('input', () => { 
+            document.getElementById('headVal').textContent = parseFloat(headSlider.value).toFixed(1) + 'x'; 
+        });
+        loudSlider.addEventListener('input', () => { 
+            document.getElementById('loudVal').textContent = parseFloat(loudSlider.value).toFixed(1) + ' dB'; 
+        });
+    });
     btnDownload.addEventListener('click', () => {
         const db = parseFloat(gainSlider.value), factor = Math.pow(10, db / 20), keepMeta = document.getElementById('keepMetadata').checked;
         const exportJson = JSON.parse(JSON.stringify(rawJson));
