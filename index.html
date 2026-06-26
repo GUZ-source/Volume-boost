@@ -233,7 +233,6 @@
     const oldLoud = document.getElementById('oldLoud');
     const newLoud = document.getElementById('newLoud');
 
-    // Estado Operacional
     let rawJson = null;
     let originalName = "";
 
@@ -257,7 +256,6 @@
         fileInput.value = '';
     });
 
-    // Processamento de Leitura
     function handleFile(file) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -270,8 +268,12 @@
                 workspace.style.display = 'block';
                 uiFilename.textContent = file.name;
 
-                // Checa arquitetura
-                if (parsed.architecture && parsed.architecture !== "WaveNet") {
+                // Sistema inteligente de verificação de arquitetura
+                const isWaveNet = parsed.architecture === "WaveNet";
+                const isSlimmable = parsed.architecture === "SlimmableContainer" && 
+                                  parsed.config && parsed.config.submodels;
+
+                if (!isWaveNet && !isSlimmable) {
                     archWarning.style.display = 'block';
                 } else {
                     archWarning.style.display = 'none';
@@ -280,72 +282,98 @@
                 gainSlider.value = 0;
                 updateCalculations();
             } catch (err) {
-                alert("Erro: Este arquivo não parece ser um modelo .nam válido (Falha no parser JSON).");
+                alert("Erro: Arquivo .nam inválido (Falha na leitura do JSON).");
             }
         };
         reader.readAsText(file);
     }
 
-    // Matemática em Tempo Real
+    // Acha o modelo principal para mostrar na tela
+    function getPrimaryModel(jsonObj) {
+        if (jsonObj.architecture === "WaveNet") return jsonObj;
+        if (jsonObj.architecture === "SlimmableContainer" && jsonObj.config && jsonObj.config.submodels) {
+            // Tenta pegar a versão principal (max_value = 1) ou a última da lista
+            const main = jsonObj.config.submodels.find(s => s.max_value === 1);
+            return main ? main.model : jsonObj.config.submodels[jsonObj.config.submodels.length - 1].model;
+        }
+        return null;
+    }
+
     function updateCalculations() {
         if (!rawJson) return;
 
         const db = parseFloat(gainSlider.value);
         const factor = Math.pow(10, db / 20);
 
-        // Textos da UI
         const prefix = db > 0 ? "+" : "";
         uiGainText.textContent = `${prefix}${db.toFixed(1)} dB`;
         uiMultiplierText.textContent = `Multiplicador linear: ${factor.toFixed(4)}x`;
 
-        // Head Scale
-        if (rawJson.config && typeof rawJson.config.head_scale === 'number') {
-            const hOrig = rawJson.config.head_scale;
+        const target = getPrimaryModel(rawJson);
+
+        if (target && target.config && typeof target.config.head_scale === 'number') {
+            const hOrig = target.config.head_scale;
             oldHead.textContent = hOrig.toFixed(5);
             newHead.textContent = (hOrig * factor).toFixed(5);
         } else {
             oldHead.textContent = "N/A"; newHead.textContent = "N/A";
         }
 
-        // Loudness Metadata
-        if (rawJson.metadata && typeof rawJson.metadata.loudness === 'number') {
-            const lOrig = rawJson.metadata.loudness;
-            oldLoud.textContent = `${lOrig.toFixed(1)} dB`;
-            newLoud.textContent = `${(lOrig + db).toFixed(1)} dB`;
+        // Pega o Loudness (geralmente fica na raiz do arquivo)
+        const rootMeta = rawJson.metadata;
+        if (rootMeta && typeof rootMeta.loudness === 'number') {
+            oldLoud.textContent = `${rootMeta.loudness.toFixed(1)} dB`;
+            newLoud.textContent = `${(rootMeta.loudness + db).toFixed(1)} dB`;
         } else {
-            oldLoud.textContent = "Sem meta"; newLoud.textContent = "Sem meta";
+            oldLoud.textContent = "--"; newLoud.textContent = "--";
         }
     }
 
     gainSlider.addEventListener('input', updateCalculations);
 
-    // Gerador de Exportação
+    // Motor de cirurgia de áudio (Suporta WaveNet nativo e SlimmableContainer)
     btnDownload.addEventListener('click', () => {
         if (!rawJson) return;
 
         const db = parseFloat(gainSlider.value);
         const factor = Math.pow(10, db / 20);
         
-        // Deep copy para não alterar o objeto original da sessão
         const exportJson = JSON.parse(JSON.stringify(rawJson));
 
-        // Aplica transformações
-        if (exportJson.config && typeof exportJson.config.head_scale === 'number') {
-            exportJson.config.head_scale *= factor;
-        }
-        if (exportJson.weights && Array.isArray(exportJson.weights) && exportJson.weights.length > 0) {
-            exportJson.weights[exportJson.weights.length - 1] *= factor;
-        }
-        if (exportJson.metadata && typeof exportJson.metadata.loudness === 'number') {
-            exportJson.metadata.loudness += db;
+        // Função interna que altera o volume de um bloco WaveNet isolado
+        const applyWaveNetBoost = (block) => {
+            if (block.config && typeof block.config.head_scale === 'number') {
+                block.config.head_scale *= factor;
+            }
+            if (block.weights && Array.isArray(block.weights) && block.weights.length > 0) {
+                block.weights[block.weights.length - 1] *= factor;
+            }
+            if (block.metadata && typeof block.metadata.loudness === 'number') {
+                block.metadata.loudness += db;
+            }
+        };
+
+        // Roteador de processamento:
+        if (exportJson.architecture === "WaveNet") {
+            applyWaveNetBoost(exportJson);
+        } 
+        else if (exportJson.architecture === "SlimmableContainer" && exportJson.config && exportJson.config.submodels) {
+            // Altera TODOS os sub-modelos dentro do arquivo de uma vez!
+            exportJson.config.submodels.forEach(sub => {
+                if (sub.model && sub.model.architecture === "WaveNet") {
+                    applyWaveNetBoost(sub.model);
+                }
+            });
+            // Corrige também o loudness na capa do arquivo
+            if (exportJson.metadata && typeof exportJson.metadata.loudness === 'number') {
+                exportJson.metadata.loudness += db;
+            }
         }
 
-        // Monta o nome do arquivo, ex: "Plexi_1968_+4.5dB.nam"
         const cleanName = originalName.replace(/\.[^/.]+$/, "");
         const sign = db > 0 ? `+${db.toFixed(1)}` : `${db.toFixed(1)}`;
         const finalName = `${cleanName}_${sign}dB.nam`;
 
-        // Dispara download pelo navegador
         const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportJson, null, 4));
         const dlAnchor = document.createElement('a');
         dlAnchor.setAttribute("href", dataStr);
