@@ -2,202 +2,90 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>NAM Tone Booster PRO</title>
+    <title>NAM Tone Booster</title>
     <style>
-        :root { --bg: #121214; --card: #202024; --accent: #ff7000; --text: #e1e1e6; }
-        body { background: var(--bg); color: var(--text); font-family: sans-serif; display: flex; justify-content: center; padding: 20px; min-height: 100vh; }
-        .container { width: 100%; max-width: 600px; background: var(--card); padding: 30px; border-radius: 12px; box-shadow: 0 10px 20px rgba(0,0,0,0.5); }
-        .pro-panel { border: 1px solid var(--accent); padding: 15px; border-radius: 8px; margin-top: 15px; display: none; background: rgba(255,112,0,0.05); }
-        .warning { color: #f75a68; font-size: 0.8rem; margin: 10px 0; }
-        input[type=range] { width: 100%; margin: 10px 0; accent-color: var(--accent); }
-        button { width:100%; padding:15px; background:var(--accent); border:none; color:white; font-weight:bold; margin-top:20px; cursor:pointer; border-radius:6px; }
+        :root { --bg: #121214; --accent: #ff7000; }
+        body { background: var(--bg); color: #e1e1e6; font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 100%; max-width: 500px; background: #202024; padding: 30px; border-radius: 12px; }
+        .pro-panel { display: none; background: #2a2a2e; padding: 15px; border-radius: 8px; margin-top: 15px; border-left: 4px solid var(--accent); }
+        button { width: 100%; padding: 15px; background: var(--accent); border: none; color: white; font-weight: bold; margin-top: 20px; cursor: pointer; border-radius: 6px; }
     </style>
 </head>
 <body>
 <div class="container">
-    <h1>NAM Tone Booster <span>PRO</span></h1>
-    <div id="dropzone" style="padding: 40px; border: 2px dashed #323238; text-align: center; cursor: pointer; margin-top:20px;">Arraste seu arquivo .nam aqui</div>
+    <h2>NAM Tone Booster</h2>
+    <div id="dropzone" style="padding: 30px; border: 2px dashed #444; text-align: center; cursor: pointer; margin-top:20px;">Clique ou arraste o .nam aqui</div>
     
     <div id="workspace" style="display:none;">
-        <p style="margin:20px 0;">Arquivo: <b id="fileName"></b></p>
-        <label><input type="checkbox" id="proMode"> Ativar Modo PRO (Controle Individual)</label>
+        <p>Arquivo: <b id="fileName"></b></p>
         
-        <div class="control-group" style="margin-top:15px;">
-            <label>Master Volume (Head Scale Multiplier)</label>
-            <input type="range" id="headSlider" min="0.1" max="16" step="0.1" value="1">
-            <span id="headVal">1.0x</span>
-        </div>
+        <label>Master Volume (Head Scale): <b id="headVal">1.0x</b></label>
+        <input type="range" id="headSlider" min="0.1" max="16" step="0.1" value="1" style="width:100%">
+
+        <button id="togglePro" style="background:#444; margin-top:10px;">Ativar Modo PRO (Ajuste de Loudness)</button>
 
         <div id="proPanel" class="pro-panel">
-            <p class="warning">⚠️ AVISO: Aumentar o ganho em 16x pode causar distorção digital. Use com moderação!</p>
-            <label>Metadado Loudness (Ajuste em dB)</label>
-            <input type="range" id="loudSlider" min="-24" max="24" step="0.5" value="0">
-            <span id="loudVal">0.0 dB</span>
+            <label>Ajuste de Loudness (dB): <b id="loudVal">0.0 dB</b></label>
+            <input type="range" id="loudSlider" min="-24" max="24" step="0.5" value="0" style="width:100%">
         </div>
+
         <button id="btnDownload">Baixar Arquivo Modificado</button>
     </div>
 </div>
 
 <script>
     let rawJson = null;
-    const proMode = document.getElementById('proMode'), proPanel = document.getElementById('proPanel');
-    const headSlider = document.getElementById('headSlider'), loudSlider = document.getElementById('loudSlider');
-
-    // Inicialização
-    document.getElementById('dropzone').addEventListener('click', () => document.getElementById('fileInput').click());
-    const fileInput = document.createElement('input'); fileInput.type = 'file'; fileInput.accept = '.nam';
-    fileInput.onchange = (e) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-            rawJson = JSON.parse(ev.target.result);
-            document.getElementById('fileName').textContent = e.target.files[0].name;
-            document.getElementById('dropzone').style.display = 'none';
-            document.getElementById('workspace').style.display = 'block';
+    const dropzone = document.getElementById('dropzone'), workspace = document.getElementById('workspace');
+    const proPanel = document.getElementById('proPanel'), togglePro = document.getElementById('togglePro');
+    
+    // Upload
+    dropzone.onclick = () => {
+        const input = document.createElement('input'); input.type = 'file'; input.accept = '.nam';
+        input.onchange = (e) => {
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                rawJson = JSON.parse(ev.target.result);
+                document.getElementById('fileName').textContent = e.target.files[0].name;
+                dropzone.style.display = 'none'; workspace.style.display = 'block';
+            };
+            reader.readAsText(e.target.files[0]);
         };
-        reader.readAsText(e.target.files[0]);
+        input.click();
     };
 
-    proMode.onchange = () => proPanel.style.display = proMode.checked ? 'block' : 'none';
-    headSlider.oninput = () => document.getElementById('headVal').textContent = headSlider.value + 'x';
-    loudSlider.oninput = () => document.getElementById('loudVal').textContent = loudSlider.value + ' dB';
+    // Toggle PRO
+    togglePro.onclick = () => {
+        proPanel.style.display = (proPanel.style.display === 'block') ? 'none' : 'block';
+        togglePro.textContent = (proPanel.style.display === 'block') ? 'Ocultar Modo PRO' : 'Ativar Modo PRO (Ajuste de Loudness)';
+    };
 
+    // UI Updates
+    document.getElementById('headSlider').oninput = (e) => document.getElementById('headVal').textContent = e.target.value + 'x';
+    document.getElementById('loudSlider').oninput = (e) => document.getElementById('loudVal').textContent = e.target.value + ' dB';
+
+    // Download
     document.getElementById('btnDownload').onclick = () => {
         let exportJson = JSON.parse(JSON.stringify(rawJson));
-        const hFactor = parseFloat(headSlider.value);
-        const lOffset = parseFloat(loudSlider.value);
+        const hF = parseFloat(document.getElementById('headSlider').value);
+        const lO = parseFloat(document.getElementById('loudSlider').value);
 
         const apply = (block) => {
-            block.config.head_scale *= hFactor;
-            block.weights[block.weights.length - 1] *= hFactor;
-            block.metadata.loudness += lOffset;
+            block.config.head_scale *= hF;
+            block.weights[block.weights.length - 1] *= hF;
+            block.metadata.loudness += lO;
         };
 
         if (exportJson.architecture === "WaveNet") apply(exportJson);
         else if (exportJson.architecture === "SlimmableContainer") {
             exportJson.config.submodels.forEach(s => apply(s.model));
-            exportJson.metadata.loudness += lOffset;
+            exportJson.metadata.loudness += lO;
         }
 
         const dl = document.createElement('a');
         dl.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportJson, null, 4));
-        dl.download = "NAM_PRO_BOOSTED.nam";
+        dl.download = "NAM_MODIFIED.nam";
         dl.click();
     };
-</script>
-</body>
-</html><!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAM Tone Booster | Editor de Ganho</title>
-    <style>
-        :root {
-            --bg-color: #121214;
-            --card-bg: #202024;
-            --card-border: #323238;
-            --accent: #ff7000;
-            --accent-hover: #e06200;
-            --text-main: #e1e1e6;
-            --text-muted: #8d8d99;
-            --success: #04d361;
-            --danger: #f75a68;
-        }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: var(--bg-color); color: var(--text-main); font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .container { width: 100%; max-width: 680px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        header { text-align: center; margin-bottom: 28px; }
-        .dropzone { border: 2px dashed var(--card-border); border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer; background: rgba(0,0,0,0.2); }
-        #workspace { display: none; }
-        .control-group { margin-bottom: 28px; }
-        .control-header { display: flex; justify-content: space-between; margin-bottom: 12px; }
-        .val-display { font-size: 1.5rem; font-weight: 800; color: var(--accent); }
-        .slider-row { display: flex; gap: 15px; align-items: center; }
-        input[type=range] { flex-grow: 1; accent-color: var(--accent); height: 6px; }
-        .btn-download { width: 100%; background: var(--accent); color: #fff; border: none; padding: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
-        .stat-box { background: rgba(0,0,0,0.25); padding: 14px; border-radius: 8px; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <header><h1>NAM <span>Tone Booster</span></h1></header>
-
-    <div class="dropzone" id="dropzone">
-        <p>📂 Clique aqui ou arraste seu arquivo .nam</p>
-        <input type="file" id="fileInput" accept=".nam,.json" style="display:none">
-    </div>
-
-    <div id="workspace">
-        <div class="control-group">
-            <div class="control-header">
-                <label>Ajuste de Ganho (Loudness)</label>
-                <div class="val-display" id="uiGainText">0.0 dB</div>
-            </div>
-            <div class="slider-row">
-                <span>-24dB</span>
-                <input type="range" id="gainSlider" min="-24" max="36" step="1.0" value="0">
-                <span>+36dB</span>
-            </div>
-            <div style="margin-top: 10px;">
-                <input type="checkbox" id="keepMetadata">
-                <label for="keepMetadata" style="font-size: 0.85rem; color: var(--text-muted);">Manter Metadados Originais</label>
-            </div>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-box"><div class="label">Head Scale</div><div class="values"><span id="oldHead"></span> -> <span id="newHead"></span></div></div>
-            <div class="stat-box"><div class="label">Metadata Loudness</div><div class="values"><span id="oldLoud"></span> -> <span id="newLoud"></span></div></div>
-        </div>
-
-        <button class="btn-download" id="btnDownload">Baixar Modelo Modificado</button>
-    </div>
-</div>
-
-<script>
-   <script>
-    // 1. Garantir que tudo carregue antes de aplicar os eventos
-    document.addEventListener('DOMContentLoaded', () => {
-        const proMode = document.getElementById('proMode');
-        const proPanel = document.getElementById('proPanel');
-        const headSlider = document.getElementById('headSlider');
-        const loudSlider = document.getElementById('loudSlider');
-        
-        // Evento do Checkbox
-        proMode.addEventListener('change', () => {
-            proPanel.style.display = proMode.checked ? 'block' : 'none';
-        });
-
-        // Atualizadores visuais
-        headSlider.addEventListener('input', () => { 
-            document.getElementById('headVal').textContent = parseFloat(headSlider.value).toFixed(1) + 'x'; 
-        });
-        loudSlider.addEventListener('input', () => { 
-            document.getElementById('loudVal').textContent = parseFloat(loudSlider.value).toFixed(1) + ' dB'; 
-        });
-    });
-    btnDownload.addEventListener('click', () => {
-        const db = parseFloat(gainSlider.value), factor = Math.pow(10, db / 20), keepMeta = document.getElementById('keepMetadata').checked;
-        const exportJson = JSON.parse(JSON.stringify(rawJson));
-        
-        const applyWaveNetBoost = (block) => {
-            block.config.head_scale *= factor;
-            block.weights[block.weights.length - 1] *= factor;
-            if (!keepMeta) block.metadata.loudness += db;
-        };
-
-        if (exportJson.architecture === "WaveNet") applyWaveNetBoost(exportJson);
-        else if (exportJson.architecture === "SlimmableContainer") {
-            exportJson.config.submodels.forEach(sub => applyWaveNetBoost(sub.model));
-            if (!keepMeta) exportJson.metadata.loudness += db;
-        }
-
-        const dl = document.createElement('a');
-        dl.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportJson, null, 4));
-        dl.download = originalName.replace(".nam", `_${db > 0 ? "+" : ""}${db}dB.nam`);
-        dl.click();
-    });
 </script>
 </body>
 </html>
