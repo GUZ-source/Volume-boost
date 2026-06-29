@@ -78,7 +78,7 @@
             flex: 1; padding: 12px; text-align: center; cursor: pointer; 
             color: var(--text-muted); font-weight: bold; transition: 0.2s;
             border-bottom: 2px solid transparent;
-            font-size: 0.85rem; /* Ajuste leve no tamanho da fonte para caber a 3ª aba perfeitamente */
+            font-size: 0.85rem;
         }
         .tab:hover { color: var(--text-main); }
         .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
@@ -103,7 +103,7 @@
         #proPanel input[type=range] { accent-color: var(--danger); }
         #proPanel .val-display { color: var(--danger); }
 
-        /* Estilo específico para o novo painel IR */
+        /* Estilo específico para o painel IR */
         #irPanel input[type=range] { accent-color: var(--success); }
         #irPanel .val-display { color: var(--success); }
 
@@ -129,9 +129,10 @@
         <p style="color: var(--text-muted); font-size: 0.9rem;">Editor de Níveis para Arquivos .nam e .wav</p>
     </header>
 
+    <input type="file" id="fileInput" accept=".nam,.json,.wav" style="display:none">
+
     <div class="dropzone" id="dropzone">
         <p style="font-weight: 500;">📂 Clique aqui ou arraste seu arquivo .nam ou .wav</p>
-        <input type="file" id="fileInput" accept=".nam,.json,.wav" style="display:none">
     </div>
 
     <div id="workspace">
@@ -213,55 +214,56 @@
 </div>
 
 <script>
+    // Seletores Elementares protegidos
     const fileInput = document.getElementById('fileInput');
     const dropzone = document.getElementById('dropzone');
     const workspace = document.getElementById('workspace');
     
-    // Abas e Painéis
-    const tabSafe = document.getElementById('tabSafe'), tabPro = document.getElementById('tabPro'), tabIR = document.getElementById('tabIR');
-    const safePanel = document.getElementById('safePanel'), proPanel = document.getElementById('proPanel'), irPanel = document.getElementById('irPanel');
+    const tabSafe = document.getElementById('tabSafe');
+    const tabPro = document.getElementById('tabPro');
+    const tabIR = document.getElementById('tabIR');
     
-    // Sliders
+    const safePanel = document.getElementById('safePanel');
+    const proPanel = document.getElementById('proPanel');
+    const irPanel = document.getElementById('irPanel');
+    
     const safeSlider = document.getElementById('safeSlider');
-    const proHeadSlider = document.getElementById('proHeadSlider'), proLoudSlider = document.getElementById('proLoudSlider');
+    const proHeadSlider = document.getElementById('proHeadSlider');
+    const proLoudSlider = document.getElementById('proLoudSlider');
     const irSlider = document.getElementById('irSlider');
     
-    // Visores
     const oldHead = document.getElementById('oldHead'), newHead = document.getElementById('newHead');
     const oldLoud = document.getElementById('oldLoud'), newLoud = document.getElementById('newLoud');
 
     let rawJson = null;
-    let rawAudioFile = null; // Nova variável apenas para guardar o áudio WAV
+    let rawAudioFile = null; 
     let originalName = "";
     let currentMode = 'safe';
     let originalHeadScale = null;
     let originalLoudness = null;
 
-    // --- Prevenção de Comportamento Padrão da Janela Inteira ---
+    // --- Garante interceptação total do navegador para evitar abrir arquivos na tela ---
     window.addEventListener('dragover', (e) => e.preventDefault());
     window.addEventListener('drop', (e) => e.preventDefault());
 
-    // --- Upload: Função Centralizada de Processamento de Arquivo ---
     function processFile(file) {
         if (!file) return;
         
         originalName = file.name;
         document.getElementById('uiFileName').textContent = originalName;
 
-        // Se o usuário jogou um arquivo .WAV
+        // Validação se o arquivo for ÁUDIO (.wav)
         if (originalName.toLowerCase().endsWith('.wav')) {
             rawAudioFile = file;
             rawJson = null;
             
-            // Força a UI para a aba do IR automaticamente
             selectMode('ir');
-            
             dropzone.style.display = 'none';
             workspace.style.display = 'block';
             return;
         }
 
-        // Se for arquivo .NAM ou .JSON (Sua lógica original 100% mantida)
+        // Validação se o arquivo for TEXTO (.nam / .json)
         rawAudioFile = null;
         const reader = new FileReader();
         
@@ -269,14 +271,12 @@
             try {
                 rawJson = JSON.parse(ev.target.result);
                 
-                // Extrai valores originais para a tela de status
                 let target = rawJson.architecture === "WaveNet" ? rawJson : 
                              (rawJson.config && rawJson.config.submodels ? rawJson.config.submodels[0].model : null);
                 
                 originalHeadScale = target && target.config ? target.config.head_scale : null;
                 originalLoudness = rawJson.metadata ? rawJson.metadata.loudness : null;
 
-                // Se jogou um .nam, manda pra aba segura
                 if(currentMode === 'ir') selectMode('safe');
 
                 dropzone.style.display = 'none';
@@ -289,11 +289,10 @@
         reader.readAsText(file);
     }
 
-    // --- Upload via Clique ---
+    // --- Eventos de Upload de clique e arraste consertados ---
     dropzone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => processFile(e.target.files[0]));
 
-    // --- Upload via Arrastar e Soltar ---
     dropzone.addEventListener('dragover', (e) => {
         e.preventDefault();
         dropzone.classList.add('dragover');
@@ -301,4 +300,168 @@
     
     dropzone.addEventListener('dragleave', (e) => {
         e.preventDefault();
-        dropzone
+        dropzone.classList.remove('dragover');
+    });
+    
+    dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            processFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    // --- Gerenciador das Abas ---
+    function selectMode(mode) {
+        currentMode = mode;
+        [tabSafe, tabPro, tabIR].forEach(t => t.classList.remove('active'));
+        [safePanel, proPanel, irPanel].forEach(p => p.classList.remove('active'));
+
+        const btn = document.getElementById('btnDownload');
+        const stats = document.getElementById('statsContainer');
+
+        if (mode === 'safe') {
+            tabSafe.classList.add('active'); safePanel.classList.add('active');
+            btn.textContent = "Baixar Modelo Modificado"; btn.style.background = "var(--accent)";
+            stats.style.display = "grid";
+        } else if (mode === 'pro') {
+            tabPro.classList.add('active'); proPanel.classList.add('active');
+            btn.textContent = "Baixar Modelo Modificado"; btn.style.background = "var(--accent)";
+            stats.style.display = "grid";
+        } else if (mode === 'ir') {
+            tabIR.classList.add('active'); irPanel.classList.add('active');
+            btn.textContent = "Baixar IR Modificado (.wav)"; btn.style.background = "var(--success)";
+            stats.style.display = "none"; 
+        }
+        updateVisuals();
+    }
+
+    tabSafe.onclick = () => selectMode('safe');
+    tabPro.onclick = () => selectMode('pro');
+    tabIR.onclick = () => selectMode('ir');
+
+    // --- Sliders Listeners ---
+    safeSlider.oninput = updateVisuals;
+    proHeadSlider.oninput = updateVisuals;
+    proLoudSlider.oninput = updateVisuals;
+    irSlider.oninput = updateVisuals;
+
+    // --- Renderização Visual ---
+    function updateVisuals() {
+        let headMult = 1.0;
+        let loudOffset = 0.0;
+
+        if (currentMode === 'safe') {
+            const db = parseFloat(safeSlider.value);
+            document.getElementById('safeVal').textContent = (db > 0 ? "+" : "") + db.toFixed(1) + " dB";
+            headMult = Math.pow(10, db / 20); 
+            loudOffset = db;
+        } else if (currentMode === 'pro') {
+            headMult = parseFloat(proHeadSlider.value);
+            loudOffset = parseFloat(proLoudSlider.value);
+            document.getElementById('proHeadVal').textContent = headMult.toFixed(1) + "x";
+            document.getElementById('proLoudVal').textContent = (loudOffset > 0 ? "+" : "") + loudOffset.toFixed(1) + " dB";
+        } else if (currentMode === 'ir') {
+            const irDb = parseFloat(irSlider.value);
+            document.getElementById('irVal').textContent = (irDb > 0 ? "+" : "") + irDb.toFixed(1) + " dB";
+            return;
+        }
+
+        if (originalHeadScale !== null) {
+            oldHead.textContent = originalHeadScale.toFixed(5);
+            let finalHeadValue = originalHeadScale * headMult;
+            newHead.textContent = finalHeadValue.toFixed(5);
+            
+            if (finalHeadValue >= 0.10) {
+                newHead.style.color = "var(--danger)";
+            } else if (finalHeadValue > 0.06) {
+                newHead.style.color = "var(--warning)";
+            } else {
+                newHead.style.color = "var(--success)";
+            }
+        } else {
+            oldHead.textContent = "N/A"; newHead.textContent = "N/A";
+        }
+
+        if (originalLoudness !== null) {
+            oldLoud.textContent = originalLoudness.toFixed(1) + " dB";
+            newLoud.textContent = (originalLoudness + loudOffset).toFixed(1) + " dB";
+            newLoud.style.color = "var(--text-main)";
+        } else {
+            oldLoud.textContent = "Sem Meta"; newLoud.textContent = "Sem Meta";
+        }
+    }
+
+    // --- Processador de Download Final ---
+    document.getElementById('btnDownload').addEventListener('click', async () => {
+        
+        // Fluxo IR (.wav)
+        if (currentMode === 'ir') {
+            if (!rawAudioFile) return alert("Por favor, carregue um arquivo .wav de Impulse Response primeiro!");
+            
+            const arrayBuffer = await rawAudioFile.arrayBuffer();
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+            
+            const db = parseFloat(irSlider.value);
+            const gain = Math.pow(10, db / 20);
+            const channelData = audioBuffer.getChannelData(0); 
+            
+            for (let i = 0; i < channelData.length; i++) {
+                channelData[i] *= gain;
+            }
+            
+            const wavBuffer = audioBufferToWav(audioBuffer);
+            const blob = new Blob([wavBuffer], { type: 'audio/wav' });
+            
+            const cleanName = originalName.replace(/\.[^/.]+$/, "");
+            const dl = document.createElement('a');
+            dl.href = URL.createObjectURL(blob);
+            dl.download = `${cleanName}_${db > 0 ? "+" : ""}${db.toFixed(1)}dB.wav`;
+            document.body.appendChild(dl); dl.click(); dl.remove();
+            return;
+        }
+
+        // Fluxo original do .NAM
+        if (!rawJson) return alert("Por favor, carregue um arquivo .nam primeiro!");
+
+        const exportJson = JSON.parse(JSON.stringify(rawJson));
+        let headMult = 1.0, loudOffset = 0.0, fileSuffix = "";
+
+        if (currentMode === 'safe') {
+            const db = parseFloat(safeSlider.value);
+            headMult = Math.pow(10, db / 20);
+            loudOffset = db;
+            fileSuffix = `_${db > 0 ? "+" : ""}${db.toFixed(1)}dB`;
+        } else {
+            headMult = parseFloat(proHeadSlider.value);
+            loudOffset = parseFloat(proLoudSlider.value);
+            fileSuffix = `_PRO`;
+        }
+
+        const applyModifications = (block) => {
+            if (block.config && typeof block.config.head_scale === 'number') block.config.head_scale *= headMult;
+            if (block.weights && Array.isArray(block.weights) && block.weights.length > 0) block.weights[block.weights.length - 1] *= headMult;
+            if (block.metadata && typeof block.metadata.loudness === 'number') block.metadata.loudness += loudOffset;
+        };
+
+        if (exportJson.architecture === "WaveNet") {
+            applyModifications(exportJson);
+        } 
+        else if (exportJson.architecture === "SlimmableContainer" && exportJson.config && exportJson.config.submodels) {
+            exportJson.config.submodels.forEach(sub => {
+                if (sub.model && sub.model.architecture === "WaveNet") applyModifications(sub.model);
+            });
+            if (exportJson.metadata && typeof exportJson.metadata.loudness === 'number') exportJson.metadata.loudness += loudOffset;
+        }
+
+        const cleanName = originalName.replace(/\.[^/.]+$/, "");
+        const dl = document.createElement('a');
+        dl.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportJson, null, 4));
+        dl.download = `${cleanName}${fileSuffix}.nam`;
+        document.body.appendChild(dl); dl.click(); dl.remove();
+    });
+</script>
+
+</body>
+</html>
