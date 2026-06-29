@@ -3,49 +3,134 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAM & IR Tone Booster</title>
+    <title>NAM Tone Booster</title>
     <script src="https://cdn.jsdelivr.net/npm/audiobuffer-to-wav@1.0.0/index.min.js"></script>
     <style>
         :root {
-            --bg-color: #121214; --card-bg: #202024; --card-border: #323238;
-            --accent: #ff7000; --accent-hover: #e06200; --text-main: #e1e1e6;
-            --text-muted: #8d8d99; --danger: #f75a68; --warning: #f1c40f; --success: #04d361;
+            --bg-color: #121214;
+            --card-bg: #202024;
+            --card-border: #323238;
+            --accent: #ff7000;
+            --accent-hover: #e06200;
+            --text-main: #e1e1e6;
+            --text-muted: #8d8d99;
+            --danger: #f75a68;
+            --warning: #f1c40f;
+            --success: #04d361;
         }
+        
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background-color: var(--bg-color); color: var(--text-main); font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; padding: 20px; }
-        .container { width: 100%; max-width: 600px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 32px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            padding: 20px; 
+        }
+        
+        .container { 
+            width: 100%; 
+            max-width: 600px; 
+            background: var(--card-bg); 
+            border: 1px solid var(--card-border); 
+            border-radius: 12px; 
+            padding: 32px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+        }
+        
         header { text-align: center; margin-bottom: 24px; }
         header h1 { font-size: 1.8rem; margin-bottom: 6px; }
         header h1 span { color: var(--accent); }
-        .dropzone { border: 2px dashed var(--card-border); border-radius: 8px; padding: 40px 20px; text-align: center; cursor: pointer; background: rgba(0,0,0,0.2); transition: all 0.2s; }
-        .dropzone:hover { border-color: var(--accent); }
+        
+        .dropzone { 
+            border: 2px dashed var(--card-border); 
+            border-radius: 8px; 
+            padding: 40px 20px; 
+            text-align: center; 
+            cursor: pointer; 
+            background: rgba(0,0,0,0.2); 
+            transition: all 0.2s;
+        }
+        .dropzone:hover, .dropzone.dragover { 
+            border-color: var(--accent); 
+            background: rgba(255, 112, 0, 0.05); 
+        }
+        
         #workspace { display: none; }
-        .file-badge { background: #18181b; padding: 12px 16px; border-radius: 6px; border-left: 4px solid var(--accent); margin-bottom: 24px; font-size: 0.9rem; word-break: break-all; }
+        
+        .file-badge {
+            background: #18181b; 
+            padding: 12px 16px; 
+            border-radius: 6px; 
+            border-left: 4px solid var(--accent); 
+            margin-bottom: 24px; 
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+
+        /* Sistema de Abas */
         .tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--card-border); }
-        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; color: var(--text-muted); font-weight: bold; border-bottom: 2px solid transparent; }
+        .tab { 
+            flex: 1; padding: 12px; text-align: center; cursor: pointer; 
+            color: var(--text-muted); font-weight: bold; transition: 0.2s;
+            border-bottom: 2px solid transparent;
+            font-size: 0.85rem; /* Ajuste leve no tamanho da fonte para caber a 3ª aba perfeitamente */
+        }
+        .tab:hover { color: var(--text-main); }
         .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
+
         .panel { display: none; padding: 15px 0; }
         .panel.active { display: block; }
+
         .slider-group { margin-bottom: 20px; }
         .slider-group label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 12px; }
-        .val-display { color: var(--accent); font-size: 1.2rem; font-weight: 800; }
-        input[type=range] { width: 100%; height: 6px; accent-color: var(--accent); }
-        .pro-warning { background: rgba(247, 90, 104, 0.1); border: 1px solid var(--danger); color: var(--danger); padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 20px; }
+        .val-display { color: var(--accent); font-size: 1.2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+        
+        input[type=range] { 
+            width: 100%; height: 6px; border-radius: 3px; outline: none; margin-bottom: 5px;
+            background: #3f3f46; accent-color: var(--accent);
+        }
+
+        /* Modo PRO Específico */
+        .pro-warning {
+            background: rgba(247, 90, 104, 0.1); border: 1px solid var(--danger);
+            color: var(--danger); padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 20px;
+        }
+        #proPanel input[type=range] { accent-color: var(--danger); }
+        #proPanel .val-display { color: var(--danger); }
+
+        /* Estilo específico para o novo painel IR */
+        #irPanel input[type=range] { accent-color: var(--success); }
+        #irPanel .val-display { color: var(--success); }
+
+        /* Estatísticas Visuais */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
         .stat-box { background: rgba(0,0,0,0.25); padding: 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
         .stat-box .label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-        .stat-box .new { color: var(--success); font-weight: bold; }
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .stat-box .values { font-size: 0.9rem; font-family: monospace; }
+        .stat-box .old { color: var(--text-muted); text-decoration: line-through; margin-right: 6px;}
+        .stat-box .new { color: var(--success); font-weight: bold; transition: color 0.3s;}
+        
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 1.05rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .btn-primary { background: var(--accent); color: #fff; }
+        .btn-primary:hover { background: var(--accent-hover); }
+
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header><h1>NAM <span>Tone Booster</span></h1></header>
+    <header>
+        <h1>NAM <span>Tone Booster</span></h1>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Editor de Níveis para Arquivos .nam e .wav</p>
+    </header>
 
     <div class="dropzone" id="dropzone">
-        <p>📂 Arraste seu arquivo .nam ou .wav</p>
+        <p style="font-weight: 500;">📂 Clique aqui ou arraste seu arquivo .nam ou .wav</p>
         <input type="file" id="fileInput" accept=".nam,.json,.wav" style="display:none">
     </div>
 
@@ -53,83 +138,167 @@
         <div class="file-badge">📄 <b id="uiFileName"></b></div>
 
         <div class="tabs">
-            <div class="tab active" id="tabSafe">Safe</div>
-            <div class="tab" id="tabPro">PRO</div>
-            <div class="tab" id="tabIR">IR Booster</div>
+            <div class="tab active" id="tabSafe">Modo Seguro (+20dB)</div>
+            <div class="tab" id="tabPro">Modo PRO</div>
+            <div class="tab" id="tabIR">IR Booster (.wav)</div>
         </div>
 
         <div class="panel active" id="safePanel">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+                Ajuste seguro em Decibéis. Garante que o Master Out e o Loudness subam sincronizados até um teto limite para evitar distorção (clipping).
+            </p>
             <div class="slider-group">
-                <label>Boost (dB) <span class="val-display" id="safeVal">+0.0 dB</span></label>
-                <input type="range" id="safeSlider" min="-24" max="20" step="0.5" value="0">
+                <label>
+                    Boost Geral (dB)
+                    <span class="val-display" id="safeVal" style="color: var(--accent);">+0.0 dB</span>
+                </label>
+                <input type="range" id="safeSlider" min="-24.0" max="20.0" step="0.5" value="0.0">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted);">
+                    <span>-24 dB</span><span>Ajuste Sincronizado</span><span>+20 dB (Max Seguro)</span>
+                </div>
             </div>
-            <button class="btn btn-primary" id="btnDownload">Baixar .nam</button>
         </div>
 
         <div class="panel" id="proPanel">
+            <div class="pro-warning">
+                ⚠️ <b>Atenção:</b> O Modo PRO permite aumentar a voltagem acima dos limites recomendados. Acompanhe a cor do <i>Head Scale</i> abaixo. Vermelho significa risco de estalos!
+            </div>
+            
             <div class="slider-group">
-                <label>Head Scale <span class="val-display" id="proHeadVal">1.0x</span></label>
+                <label>
+                    1. Ganho Físico (Head Scale)
+                    <span class="val-display" id="proHeadVal">1.0x</span>
+                </label>
                 <input type="range" id="proHeadSlider" min="0.1" max="24.0" step="0.1" value="1.0">
             </div>
-            <button class="btn btn-primary" id="btnDownloadPro">Baixar .nam PRO</button>
+
+            <div class="slider-group" style="margin-bottom: 0;">
+                <label>
+                    2. Etiqueta (Loudness Offset)
+                    <span class="val-display" id="proLoudVal">+0.0 dB</span>
+                </label>
+                <input type="range" id="proLoudSlider" min="-24.0" max="24.0" step="0.5" value="0.0">
+            </div>
         </div>
 
         <div class="panel" id="irPanel">
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
+                Ajuste o ganho do seu arquivo de Impulse Response (.wav). Recomenda-se testar aumentos entre +3dB e +6dB.
+            </p>
             <div class="slider-group">
-                <label>Gain (dB) <span class="val-display" id="irVal" style="color:var(--success)">+0.0 dB</span></label>
-                <input type="range" id="irSlider" min="-12" max="12" step="0.5" value="0">
+                <label>
+                    Boost do IR (dB)
+                    <span class="val-display" id="irVal">+0.0 dB</span>
+                </label>
+                <input type="range" id="irSlider" min="-12.0" max="12.0" step="0.5" value="0.0">
+                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted);">
+                    <span>-12 dB</span><span>0 dB (Original)</span><span>+12 dB</span>
+                </div>
             </div>
-            <button class="btn btn-primary" id="btnDownloadIR" style="background:var(--success)">Processar e Baixar .wav</button>
         </div>
+
+        <div class="stats-grid" id="statsContainer">
+            <div class="stat-box">
+                <div class="label">Head Scale (Master Out)</div>
+                <div class="values"><span class="old" id="oldHead">0.0000</span><span class="new" id="newHead">0.0000</span></div>
+            </div>
+            <div class="stat-box">
+                <div class="label">Metadata Loudness</div>
+                <div class="values"><span class="old" id="oldLoud">-- dB</span><span class="new" id="newLoud">-- dB</span></div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="btnDownload">Baixar Modelo Modificado</button>
     </div>
 </div>
 
 <script>
-    // Referências e Lógica de Navegação
-    const dropzone = document.getElementById('dropzone'), workspace = document.getElementById('workspace');
+    const fileInput = document.getElementById('fileInput');
+    const dropzone = document.getElementById('dropzone');
+    const workspace = document.getElementById('workspace');
     
-    function switchTab(tabId) {
-        ['safePanel', 'proPanel', 'irPanel'].forEach(id => document.getElementById(id).classList.remove('active'));
-        ['tabSafe', 'tabPro', 'tabIR'].forEach(id => document.getElementById(id).classList.remove('active'));
-        document.getElementById(tabId.replace('tab', '') + 'Panel').classList.add('active');
-        document.getElementById(tabId).classList.add('active');
+    // Abas e Painéis
+    const tabSafe = document.getElementById('tabSafe'), tabPro = document.getElementById('tabPro'), tabIR = document.getElementById('tabIR');
+    const safePanel = document.getElementById('safePanel'), proPanel = document.getElementById('proPanel'), irPanel = document.getElementById('irPanel');
+    
+    // Sliders
+    const safeSlider = document.getElementById('safeSlider');
+    const proHeadSlider = document.getElementById('proHeadSlider'), proLoudSlider = document.getElementById('proLoudSlider');
+    const irSlider = document.getElementById('irSlider');
+    
+    // Visores
+    const oldHead = document.getElementById('oldHead'), newHead = document.getElementById('newHead');
+    const oldLoud = document.getElementById('oldLoud'), newLoud = document.getElementById('newLoud');
+
+    let rawJson = null;
+    let rawAudioFile = null; // Nova variável apenas para guardar o áudio WAV
+    let originalName = "";
+    let currentMode = 'safe';
+    let originalHeadScale = null;
+    let originalLoudness = null;
+
+    // --- Prevenção de Comportamento Padrão da Janela Inteira ---
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => e.preventDefault());
+
+    // --- Upload: Função Centralizada de Processamento de Arquivo ---
+    function processFile(file) {
+        if (!file) return;
+        
+        originalName = file.name;
+        document.getElementById('uiFileName').textContent = originalName;
+
+        // Se o usuário jogou um arquivo .WAV
+        if (originalName.toLowerCase().endsWith('.wav')) {
+            rawAudioFile = file;
+            rawJson = null;
+            
+            // Força a UI para a aba do IR automaticamente
+            selectMode('ir');
+            
+            dropzone.style.display = 'none';
+            workspace.style.display = 'block';
+            return;
+        }
+
+        // Se for arquivo .NAM ou .JSON (Sua lógica original 100% mantida)
+        rawAudioFile = null;
+        const reader = new FileReader();
+        
+        reader.onload = (ev) => {
+            try {
+                rawJson = JSON.parse(ev.target.result);
+                
+                // Extrai valores originais para a tela de status
+                let target = rawJson.architecture === "WaveNet" ? rawJson : 
+                             (rawJson.config && rawJson.config.submodels ? rawJson.config.submodels[0].model : null);
+                
+                originalHeadScale = target && target.config ? target.config.head_scale : null;
+                originalLoudness = rawJson.metadata ? rawJson.metadata.loudness : null;
+
+                // Se jogou um .nam, manda pra aba segura
+                if(currentMode === 'ir') selectMode('safe');
+
+                dropzone.style.display = 'none';
+                workspace.style.display = 'block';
+                updateVisuals();
+            } catch (err) {
+                alert("Erro: O arquivo não é um modelo .nam válido.");
+            }
+        };
+        reader.readAsText(file);
     }
 
-    document.getElementById('tabSafe').onclick = () => switchTab('tabSafe');
-    document.getElementById('tabPro').onclick = () => switchTab('tabPro');
-    document.getElementById('tabIR').onclick = () => switchTab('tabIR');
+    // --- Upload via Clique ---
+    dropzone.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => processFile(e.target.files[0]));
 
-    // Lógica IR (WAV)
-    document.getElementById('irSlider').oninput = (e) => document.getElementById('irVal').textContent = (e.target.value > 0 ? "+" : "") + e.target.value + " dB";
-
-    document.getElementById('btnDownloadIR').addEventListener('click', async () => {
-        const file = fileInput.files[0];
-        const buffer = await file.arrayBuffer();
-        const ctx = new AudioContext();
-        const audioBuf = await ctx.decodeAudioData(buffer);
-        const gain = Math.pow(10, parseFloat(document.getElementById('irSlider').value) / 20);
-        const data = audioBuf.getChannelData(0);
-        for (let i = 0; i < data.length; i++) data[i] *= gain;
-        
-        const wav = audioBufferToWav(audioBuf);
-        const url = URL.createObjectURL(new Blob([new DataView(wav)], { type: 'audio/wav' }));
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = file.name.replace('.wav', '') + "_boosted.wav";
-        a.click();
+    // --- Upload via Arrastar e Soltar ---
+    dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
     });
-
-    // ... (Mantenha sua lógica original de processamento de NAM abaixo)
-    // Dica: Certifique-se de que sua função 'processFile' original lide com ambos os tipos de arquivo.
     
-    dropzone.onclick = () => fileInput.click();
-    fileInput.onchange = (e) => {
-        const file = e.target.files[0];
-        document.getElementById('uiFileName').textContent = file.name;
-        dropzone.style.display = 'none';
-        workspace.style.display = 'block';
-        if(file.name.endsWith('.nam')) { /* sua lógica de parse JSON aqui */ }
-    };
-</script>
-</body>
-</html>
+    dropzone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropzone
