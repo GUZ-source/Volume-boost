@@ -2,382 +2,78 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NAM Tone Booster</title>
+    <title>NAM & IR Tone Booster</title>
+    <script src="https://cdn.jsdelivr.net/npm/audiobuffer-to-wav@1.0.0/index.min.js"></script>
     <style>
-        :root {
-            --bg-color: #121214;
-            --card-bg: #202024;
-            --card-border: #323238;
-            --accent: #ff7000;
-            --accent-hover: #e06200;
-            --text-main: #e1e1e6;
-            --text-muted: #8d8d99;
-            --danger: #f75a68;
-            --warning: #f1c40f;
-            --success: #04d361;
-        }
-        
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        
-        body { 
-            background-color: var(--bg-color); 
-            color: var(--text-main); 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            min-height: 100vh; 
-            padding: 20px; 
-        }
-        
-        .container { 
-            width: 100%; 
-            max-width: 600px; 
-            background: var(--card-bg); 
-            border: 1px solid var(--card-border); 
-            border-radius: 12px; 
-            padding: 32px; 
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
-        }
-        
-        header { text-align: center; margin-bottom: 24px; }
-        header h1 { font-size: 1.8rem; margin-bottom: 6px; }
-        header h1 span { color: var(--accent); }
-        
-        .dropzone { 
-            border: 2px dashed var(--card-border); 
-            border-radius: 8px; 
-            padding: 40px 20px; 
-            text-align: center; 
-            cursor: pointer; 
-            background: rgba(0,0,0,0.2); 
-            transition: all 0.2s;
-        }
-        .dropzone:hover, .dropzone.dragover { 
-            border-color: var(--accent); 
-            background: rgba(255, 112, 0, 0.05); 
-        }
-        
-        #workspace { display: none; }
-        
-        .file-badge {
-            background: #18181b; 
-            padding: 12px 16px; 
-            border-radius: 6px; 
-            border-left: 4px solid var(--accent); 
-            margin-bottom: 24px; 
-            font-size: 0.9rem;
-            word-break: break-all;
-        }
-
-        /* Sistema de Abas */
+        /* (Mantenha todo o seu CSS aqui, ele estava ótimo!) */
+        :root { --bg-color: #121214; --card-bg: #202024; --card-border: #323238; --accent: #ff7000; --text-main: #e1e1e6; --text-muted: #8d8d99; --success: #04d361; }
+        body { background-color: var(--bg-color); color: var(--text-main); font-family: sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .container { width: 100%; max-width: 600px; background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 12px; padding: 32px; }
         .tabs { display: flex; margin-bottom: 20px; border-bottom: 1px solid var(--card-border); }
-        .tab { 
-            flex: 1; padding: 12px; text-align: center; cursor: pointer; 
-            color: var(--text-muted); font-weight: bold; transition: 0.2s;
-            border-bottom: 2px solid transparent;
-        }
-        .tab:hover { color: var(--text-main); }
+        .tab { flex: 1; padding: 12px; text-align: center; cursor: pointer; color: var(--text-muted); font-weight: bold; border-bottom: 2px solid transparent; }
         .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
-
-        .panel { display: none; padding: 15px 0; }
+        .panel { display: none; }
         .panel.active { display: block; }
-
-        .slider-group { margin-bottom: 20px; }
-        .slider-group label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 12px; }
-        .val-display { color: var(--accent); font-size: 1.2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
-        
-        input[type=range] { 
-            width: 100%; height: 6px; border-radius: 3px; outline: none; margin-bottom: 5px;
-            background: #3f3f46; accent-color: var(--accent);
-        }
-
-        /* Modo PRO Específico */
-        .pro-warning {
-            background: rgba(247, 90, 104, 0.1); border: 1px solid var(--danger);
-            color: var(--danger); padding: 12px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 20px;
-        }
-        #proPanel input[type=range] { accent-color: var(--danger); }
-        #proPanel .val-display { color: var(--danger); }
-
-        /* Estatísticas Visuais */
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
-        .stat-box { background: rgba(0,0,0,0.25); padding: 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
-        .stat-box .label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); margin-bottom: 8px; }
-        .stat-box .values { font-size: 0.9rem; font-family: monospace; }
-        .stat-box .old { color: var(--text-muted); text-decoration: line-through; margin-right: 6px;}
-        .stat-box .new { color: var(--success); font-weight: bold; transition: color 0.3s;}
-        
-        .btn { width: 100%; padding: 16px; border: none; border-radius: 8px; font-size: 1.05rem; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-primary { background: var(--accent); color: #fff; }
-        .btn-primary:hover { background: var(--accent-hover); }
-
+        .btn { width: 100%; padding: 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .btn-primary { background: var(--accent); color: white; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <header>
-        <h1>NAM <span>Tone Booster</span></h1>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">Editor de Níveis para Arquivos .nam</p>
-    </header>
-
-    <div class="dropzone" id="dropzone">
-        <p style="font-weight: 500;">📂 Clique aqui ou arraste seu arquivo .nam</p>
-        <input type="file" id="fileInput" accept=".nam,.json" style="display:none">
+    <h1>Tone Booster</h1>
+    <input type="file" id="fileInput" accept=".nam,.json,.wav">
+    
+    <div class="tabs">
+        <div class="tab active" id="tabNAM">NAM</div>
+        <div class="tab" id="tabIR">IR Booster</div>
     </div>
 
-    <div id="workspace">
-        <div class="file-badge">📄 <b id="uiFileName"></b></div>
+    <div class="panel active" id="namPanel">
+        <input type="range" id="namSlider" min="-24" max="24" value="0">
+        <button class="btn btn-primary" id="btnDownloadNAM">Baixar .nam</button>
+    </div>
 
-        <!-- Abas -->
-        <div class="tabs">
-            <div class="tab active" id="tabSafe">Modo Seguro (Limitado a +20dB)</div>
-            <div class="tab" id="tabPro">Modo PRO (Sem Limites)</div>
-        </div>
-
-        <!-- Painel Modo SEGURO -->
-        <div class="panel active" id="safePanel">
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
-                Ajuste seguro em Decibéis. Garante que o Master Out e o Loudness subam sincronizados até um teto limite para evitar distorção (clipping).
-            </p>
-            <div class="slider-group">
-                <label>
-                    Boost Geral (dB)
-                    <span class="val-display" id="safeVal" style="color: var(--accent);">+0.0 dB</span>
-                </label>
-                <!-- Trava o slider de decibéis em +20dB -->
-                <input type="range" id="safeSlider" min="-24.0" max="20.0" step="0.5" value="0.0">
-                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted);">
-                    <span>-24 dB</span><span>Ajuste Sincronizado</span><span>+20 dB (Max Seguro)</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- Painel Modo PRO -->
-        <div class="panel" id="proPanel">
-            <div class="pro-warning">
-                ⚠️ <b>Atenção:</b> O Modo PRO permite aumentar a voltagem acima dos limites recomendados. Acompanhe a cor do <i>Head Scale</i> abaixo. Vermelho significa risco de estalos!
-            </div>
-            
-            <div class="slider-group">
-                <label>
-                    1. Ganho Físico (Head Scale)
-                    <span class="val-display" id="proHeadVal">1.0x</span>
-                </label>
-                <!-- Aumentado para 24.0x -->
-                <input type="range" id="proHeadSlider" min="0.1" max="24.0" step="0.1" value="1.0">
-            </div>
-
-            <div class="slider-group" style="margin-bottom: 0;">
-                <label>
-                    2. Etiqueta (Loudness Offset)
-                    <span class="val-display" id="proLoudVal">+0.0 dB</span>
-                </label>
-                <input type="range" id="proLoudSlider" min="-24.0" max="24.0" step="0.5" value="0.0">
-            </div>
-        </div>
-
-        <!-- Visualizador de Estatísticas -->
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div class="label">Head Scale (Master Out)</div>
-                <div class="values"><span class="old" id="oldHead">0.0000</span><span class="new" id="newHead">0.0000</span></div>
-            </div>
-            <div class="stat-box">
-                <div class="label">Metadata Loudness</div>
-                <div class="values"><span class="old" id="oldLoud">-- dB</span><span class="new" id="newLoud">-- dB</span></div>
-            </div>
-        </div>
-
-        <button class="btn btn-primary" id="btnDownload">Baixar Modelo Modificado</button>
+    <div class="panel" id="irPanel">
+        <input type="range" id="irSlider" min="-12" max="12" value="0">
+        <button class="btn btn-primary" id="btnDownloadIR" style="background: var(--success);">Processar e Baixar .wav</button>
     </div>
 </div>
 
 <script>
-    const fileInput = document.getElementById('fileInput');
-    const dropzone = document.getElementById('dropzone');
-    const workspace = document.getElementById('workspace');
-    
-    // Abas e Painéis
-    const tabSafe = document.getElementById('tabSafe'), tabPro = document.getElementById('tabPro');
-    const safePanel = document.getElementById('safePanel'), proPanel = document.getElementById('proPanel');
-    
-    // Sliders
-    const safeSlider = document.getElementById('safeSlider');
-    const proHeadSlider = document.getElementById('proHeadSlider'), proLoudSlider = document.getElementById('proLoudSlider');
-    
-    // Visores
-    const oldHead = document.getElementById('oldHead'), newHead = document.getElementById('newHead');
-    const oldLoud = document.getElementById('oldLoud'), newLoud = document.getElementById('newLoud');
-
-    let rawJson = null;
-    let originalName = "";
-    let currentMode = 'safe';
-    let originalHeadScale = null;
-    let originalLoudness = null;
-
-    // --- Prevenção de Comportamento Padrão da Janela Inteira ---
-    window.addEventListener('dragover', (e) => e.preventDefault());
-    window.addEventListener('drop', (e) => e.preventDefault());
-
-    // --- Upload: Função Centralizada de Processamento de Arquivo ---
-    function processFile(file) {
-        if (!file) return;
-        
-        originalName = file.name;
-        const reader = new FileReader();
-        
-        reader.onload = (ev) => {
-            try {
-                rawJson = JSON.parse(ev.target.result);
-                document.getElementById('uiFileName').textContent = originalName;
-                
-                // Extrai valores originais para a tela de status
-                let target = rawJson.architecture === "WaveNet" ? rawJson : 
-                             (rawJson.config && rawJson.config.submodels ? rawJson.config.submodels[0].model : null);
-                
-                originalHeadScale = target && target.config ? target.config.head_scale : null;
-                originalLoudness = rawJson.metadata ? rawJson.metadata.loudness : null;
-
-                dropzone.style.display = 'none';
-                workspace.style.display = 'block';
-                updateVisuals();
-            } catch (err) {
-                alert("Erro: O arquivo .nam é inválido ou está corrompido.");
-            }
-        };
-        reader.readAsText(file);
-    }
-
-    // --- Upload via Clique ---
-    dropzone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => processFile(e.target.files[0]));
-
-    // --- Upload via Arrastar e Soltar ---
-    dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault(); // Impede de abrir o arquivo na nova aba
-        dropzone.classList.add('dragover');
-    });
-    
-    dropzone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        dropzone.classList.remove('dragover');
-    });
-    
-    dropzone.addEventListener('drop', (e) => {
-        e.preventDefault(); // Impede de abrir o arquivo na nova aba
-        dropzone.classList.remove('dragover');
-        
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-            processFile(e.dataTransfer.files[0]);
-        }
-    });
-
-    // --- Lógica de Abas ---
-    tabSafe.onclick = () => {
-        currentMode = 'safe';
-        tabSafe.classList.add('active'); tabPro.classList.remove('active');
-        safePanel.classList.add('active'); proPanel.classList.remove('active');
-        updateVisuals();
+    // Lógica de Abas
+    document.getElementById('tabNAM').onclick = () => {
+        document.getElementById('namPanel').classList.add('active');
+        document.getElementById('irPanel').classList.remove('active');
     };
-    tabPro.onclick = () => {
-        currentMode = 'pro';
-        tabPro.classList.add('active'); tabSafe.classList.remove('active');
-        proPanel.classList.add('active'); safePanel.classList.remove('active');
-        updateVisuals();
+    document.getElementById('tabIR').onclick = () => {
+        document.getElementById('namPanel').classList.remove('active');
+        document.getElementById('irPanel').classList.add('active');
     };
 
-    // --- Eventos de Slider ---
-    safeSlider.oninput = updateVisuals;
-    proHeadSlider.oninput = updateVisuals;
-    proLoudSlider.oninput = updateVisuals;
-
-    // --- Atualiza Tela e Valores ---
-    function updateVisuals() {
-        let headMult = 1.0;
-        let loudOffset = 0.0;
-
-        if (currentMode === 'safe') {
-            const db = parseFloat(safeSlider.value);
-            document.getElementById('safeVal').textContent = (db > 0 ? "+" : "") + db.toFixed(1) + " dB";
-            headMult = Math.pow(10, db / 20); 
-            loudOffset = db;
-        } else {
-            headMult = parseFloat(proHeadSlider.value);
-            loudOffset = parseFloat(proLoudSlider.value);
-            document.getElementById('proHeadVal').textContent = headMult.toFixed(1) + "x";
-            document.getElementById('proLoudVal').textContent = (loudOffset > 0 ? "+" : "") + loudOffset.toFixed(1) + " dB";
-        }
-
-        if (originalHeadScale !== null) {
-            oldHead.textContent = originalHeadScale.toFixed(5);
-            let finalHeadValue = originalHeadScale * headMult;
-            newHead.textContent = finalHeadValue.toFixed(5);
-            
-            if (finalHeadValue >= 0.10) {
-                newHead.style.color = "var(--danger)";
-            } else if (finalHeadValue > 0.06) {
-                newHead.style.color = "var(--warning)";
-            } else {
-                newHead.style.color = "var(--success)";
-            }
-        } else {
-            oldHead.textContent = "N/A"; newHead.textContent = "N/A";
-        }
-
-        if (originalLoudness !== null) {
-            oldLoud.textContent = originalLoudness.toFixed(1) + " dB";
-            newLoud.textContent = (originalLoudness + loudOffset).toFixed(1) + " dB";
-            newLoud.style.color = "var(--text-main)";
-        } else {
-            oldLoud.textContent = "Sem Meta"; newLoud.textContent = "Sem Meta";
-        }
-    }
-
-    // --- Exportação ---
-    document.getElementById('btnDownload').addEventListener('click', () => {
-        if (!rawJson) return;
-
-        const exportJson = JSON.parse(JSON.stringify(rawJson));
+    // Lógica IR Booster usando a lib CDN
+    document.getElementById('btnDownloadIR').addEventListener('click', async () => {
+        const fileInput = document.getElementById('fileInput');
+        if (!fileInput.files[0]) return alert("Selecione um arquivo!");
         
-        let headMult = 1.0, loudOffset = 0.0, fileSuffix = "";
+        const arrayBuffer = await fileInput.files[0].arrayBuffer();
+        const audioCtx = new AudioContext();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        
+        const gain = Math.pow(10, parseFloat(document.getElementById('irSlider').value) / 20);
+        const data = audioBuffer.getChannelData(0);
+        for (let i = 0; i < data.length; i++) data[i] *= gain;
 
-        if (currentMode === 'safe') {
-            const db = parseFloat(safeSlider.value);
-            headMult = Math.pow(10, db / 20);
-            loudOffset = db;
-            fileSuffix = `_${db > 0 ? "+" : ""}${db.toFixed(1)}dB`;
-        } else {
-            headMult = parseFloat(proHeadSlider.value);
-            loudOffset = parseFloat(proLoudSlider.value);
-            fileSuffix = `_PRO`;
-        }
-
-        const applyModifications = (block) => {
-            if (block.config && typeof block.config.head_scale === 'number') block.config.head_scale *= headMult;
-            if (block.weights && Array.isArray(block.weights) && block.weights.length > 0) block.weights[block.weights.length - 1] *= headMult;
-            if (block.metadata && typeof block.metadata.loudness === 'number') block.metadata.loudness += loudOffset;
-        };
-
-        if (exportJson.architecture === "WaveNet") {
-            applyModifications(exportJson);
-        } 
-        else if (exportJson.architecture === "SlimmableContainer" && exportJson.config && exportJson.config.submodels) {
-            exportJson.config.submodels.forEach(sub => {
-                if (sub.model && sub.model.architecture === "WaveNet") applyModifications(sub.model);
-            });
-            if (exportJson.metadata && typeof exportJson.metadata.loudness === 'number') exportJson.metadata.loudness += loudOffset;
-        }
-
-        const cleanName = originalName.replace(/\.[^/.]+$/, "");
-        const dl = document.createElement('a');
-        dl.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportJson, null, 4));
-        dl.download = `${cleanName}${fileSuffix}.nam`;
-        document.body.appendChild(dl); dl.click(); dl.remove();
+        // Gerar arquivo WAV com a biblioteca externa
+        const wav = audioBufferToWav(audioBuffer);
+        const blob = new Blob([new DataView(wav)], { type: 'audio/wav' });
+        
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "ir_boosted.wav";
+        a.click();
     });
 </script>
-
 </body>
 </html>
