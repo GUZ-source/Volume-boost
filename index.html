@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NAM Tone Booster</title>
-    <script src="https://cdn.jsdelivr.net/npm/audiobuffer-to-wav@1.0.0/index.min.js"></script>
     <style>
         :root {
             --bg-color: #121214;
@@ -78,7 +77,6 @@
             flex: 1; padding: 12px; text-align: center; cursor: pointer; 
             color: var(--text-muted); font-weight: bold; transition: 0.2s;
             border-bottom: 2px solid transparent;
-            font-size: 0.85rem;
         }
         .tab:hover { color: var(--text-main); }
         .tab.active { color: var(--accent); border-bottom: 2px solid var(--accent); }
@@ -103,10 +101,6 @@
         #proPanel input[type=range] { accent-color: var(--danger); }
         #proPanel .val-display { color: var(--danger); }
 
-        /* Estilo específico para o painel IR */
-        #irPanel input[type=range] { accent-color: var(--success); }
-        #irPanel .val-display { color: var(--success); }
-
         /* Estatísticas Visuais */
         .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 28px; }
         .stat-box { background: rgba(0,0,0,0.25); padding: 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
@@ -126,24 +120,24 @@
 <div class="container">
     <header>
         <h1>NAM <span>Tone Booster</span></h1>
-        <p style="color: var(--text-muted); font-size: 0.9rem;">Editor de Níveis para Arquivos .nam e .wav</p>
+        <p style="color: var(--text-muted); font-size: 0.9rem;">Editor de Níveis para Arquivos .nam</p>
     </header>
 
-    <input type="file" id="fileInput" accept=".nam,.json,.wav" style="display:none">
-
     <div class="dropzone" id="dropzone">
-        <p style="font-weight: 500;">📂 Clique aqui ou arraste seu arquivo .nam ou .wav</p>
+        <p style="font-weight: 500;">📂 Clique aqui ou arraste seu arquivo .nam</p>
+        <input type="file" id="fileInput" accept=".nam,.json" style="display:none">
     </div>
 
     <div id="workspace">
         <div class="file-badge">📄 <b id="uiFileName"></b></div>
 
+        <!-- Abas -->
         <div class="tabs">
-            <div class="tab active" id="tabSafe">Modo Seguro (+20dB)</div>
-            <div class="tab" id="tabPro">Modo PRO</div>
-            <div class="tab" id="tabIR">IR Booster (.wav)</div>
+            <div class="tab active" id="tabSafe">Modo Seguro (Limitado a +20dB)</div>
+            <div class="tab" id="tabPro">Modo PRO (Sem Limites)</div>
         </div>
 
+        <!-- Painel Modo SEGURO -->
         <div class="panel active" id="safePanel">
             <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
                 Ajuste seguro em Decibéis. Garante que o Master Out e o Loudness subam sincronizados até um teto limite para evitar distorção (clipping).
@@ -153,6 +147,7 @@
                     Boost Geral (dB)
                     <span class="val-display" id="safeVal" style="color: var(--accent);">+0.0 dB</span>
                 </label>
+                <!-- Trava o slider de decibéis em +20dB -->
                 <input type="range" id="safeSlider" min="-24.0" max="20.0" step="0.5" value="0.0">
                 <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted);">
                     <span>-24 dB</span><span>Ajuste Sincronizado</span><span>+20 dB (Max Seguro)</span>
@@ -160,6 +155,7 @@
             </div>
         </div>
 
+        <!-- Painel Modo PRO -->
         <div class="panel" id="proPanel">
             <div class="pro-warning">
                 ⚠️ <b>Atenção:</b> O Modo PRO permite aumentar a voltagem acima dos limites recomendados. Acompanhe a cor do <i>Head Scale</i> abaixo. Vermelho significa risco de estalos!
@@ -170,6 +166,7 @@
                     1. Ganho Físico (Head Scale)
                     <span class="val-display" id="proHeadVal">1.0x</span>
                 </label>
+                <!-- Aumentado para 24.0x -->
                 <input type="range" id="proHeadSlider" min="0.1" max="24.0" step="0.1" value="1.0">
             </div>
 
@@ -182,23 +179,8 @@
             </div>
         </div>
 
-        <div class="panel" id="irPanel">
-            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">
-                Ajuste o ganho do seu arquivo de Impulse Response (.wav). Recomenda-se testar aumentos entre +3dB e +6dB.
-            </p>
-            <div class="slider-group">
-                <label>
-                    Boost do IR (dB)
-                    <span class="val-display" id="irVal">+0.0 dB</span>
-                </label>
-                <input type="range" id="irSlider" min="-12.0" max="12.0" step="0.5" value="0.0">
-                <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted);">
-                    <span>-12 dB</span><span>0 dB (Original)</span><span>+12 dB</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="stats-grid" id="statsContainer">
+        <!-- Visualizador de Estatísticas -->
+        <div class="stats-grid">
             <div class="stat-box">
                 <div class="label">Head Scale (Master Out)</div>
                 <div class="values"><span class="old" id="oldHead">0.0000</span><span class="new" id="newHead">0.0000</span></div>
@@ -214,87 +196,68 @@
 </div>
 
 <script>
-    // Seletores Elementares protegidos
     const fileInput = document.getElementById('fileInput');
     const dropzone = document.getElementById('dropzone');
     const workspace = document.getElementById('workspace');
     
-    const tabSafe = document.getElementById('tabSafe');
-    const tabPro = document.getElementById('tabPro');
-    const tabIR = document.getElementById('tabIR');
+    // Abas e Painéis
+    const tabSafe = document.getElementById('tabSafe'), tabPro = document.getElementById('tabPro');
+    const safePanel = document.getElementById('safePanel'), proPanel = document.getElementById('proPanel');
     
-    const safePanel = document.getElementById('safePanel');
-    const proPanel = document.getElementById('proPanel');
-    const irPanel = document.getElementById('irPanel');
-    
+    // Sliders
     const safeSlider = document.getElementById('safeSlider');
-    const proHeadSlider = document.getElementById('proHeadSlider');
-    const proLoudSlider = document.getElementById('proLoudSlider');
-    const irSlider = document.getElementById('irSlider');
+    const proHeadSlider = document.getElementById('proHeadSlider'), proLoudSlider = document.getElementById('proLoudSlider');
     
+    // Visores
     const oldHead = document.getElementById('oldHead'), newHead = document.getElementById('newHead');
     const oldLoud = document.getElementById('oldLoud'), newLoud = document.getElementById('newLoud');
 
     let rawJson = null;
-    let rawAudioFile = null; 
     let originalName = "";
     let currentMode = 'safe';
     let originalHeadScale = null;
     let originalLoudness = null;
 
-    // --- Garante interceptação total do navegador para evitar abrir arquivos na tela ---
+    // --- Prevenção de Comportamento Padrão da Janela Inteira ---
     window.addEventListener('dragover', (e) => e.preventDefault());
     window.addEventListener('drop', (e) => e.preventDefault());
 
+    // --- Upload: Função Centralizada de Processamento de Arquivo ---
     function processFile(file) {
         if (!file) return;
         
         originalName = file.name;
-        document.getElementById('uiFileName').textContent = originalName;
-
-        // Validação se o arquivo for ÁUDIO (.wav)
-        if (originalName.toLowerCase().endsWith('.wav')) {
-            rawAudioFile = file;
-            rawJson = null;
-            
-            selectMode('ir');
-            dropzone.style.display = 'none';
-            workspace.style.display = 'block';
-            return;
-        }
-
-        // Validação se o arquivo for TEXTO (.nam / .json)
-        rawAudioFile = null;
         const reader = new FileReader();
         
         reader.onload = (ev) => {
             try {
                 rawJson = JSON.parse(ev.target.result);
+                document.getElementById('uiFileName').textContent = originalName;
                 
+                // Extrai valores originais para a tela de status
                 let target = rawJson.architecture === "WaveNet" ? rawJson : 
                              (rawJson.config && rawJson.config.submodels ? rawJson.config.submodels[0].model : null);
                 
                 originalHeadScale = target && target.config ? target.config.head_scale : null;
                 originalLoudness = rawJson.metadata ? rawJson.metadata.loudness : null;
 
-                if(currentMode === 'ir') selectMode('safe');
-
                 dropzone.style.display = 'none';
                 workspace.style.display = 'block';
                 updateVisuals();
             } catch (err) {
-                alert("Erro: O arquivo não é um modelo .nam válido.");
+                alert("Erro: O arquivo .nam é inválido ou está corrompido.");
             }
         };
         reader.readAsText(file);
     }
 
-    // --- Eventos de Upload de clique e arraste consertados ---
+    // --- Upload via Clique ---
     dropzone.addEventListener('click', () => fileInput.click());
     fileInput.addEventListener('change', (e) => processFile(e.target.files[0]));
 
+    // --- Upload via Arrastar e Soltar ---
     dropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Impede de abrir o arquivo na nova aba
         dropzone.classList.add('dragover');
     });
     
@@ -304,49 +267,34 @@
     });
     
     dropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Impede de abrir o arquivo na nova aba
         dropzone.classList.remove('dragover');
+        
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             processFile(e.dataTransfer.files[0]);
         }
     });
 
-    // --- Gerenciador das Abas ---
-    function selectMode(mode) {
-        currentMode = mode;
-        [tabSafe, tabPro, tabIR].forEach(t => t.classList.remove('active'));
-        [safePanel, proPanel, irPanel].forEach(p => p.classList.remove('active'));
-
-        const btn = document.getElementById('btnDownload');
-        const stats = document.getElementById('statsContainer');
-
-        if (mode === 'safe') {
-            tabSafe.classList.add('active'); safePanel.classList.add('active');
-            btn.textContent = "Baixar Modelo Modificado"; btn.style.background = "var(--accent)";
-            stats.style.display = "grid";
-        } else if (mode === 'pro') {
-            tabPro.classList.add('active'); proPanel.classList.add('active');
-            btn.textContent = "Baixar Modelo Modificado"; btn.style.background = "var(--accent)";
-            stats.style.display = "grid";
-        } else if (mode === 'ir') {
-            tabIR.classList.add('active'); irPanel.classList.add('active');
-            btn.textContent = "Baixar IR Modificado (.wav)"; btn.style.background = "var(--success)";
-            stats.style.display = "none"; 
-        }
+    // --- Lógica de Abas ---
+    tabSafe.onclick = () => {
+        currentMode = 'safe';
+        tabSafe.classList.add('active'); tabPro.classList.remove('active');
+        safePanel.classList.add('active'); proPanel.classList.remove('active');
         updateVisuals();
-    }
+    };
+    tabPro.onclick = () => {
+        currentMode = 'pro';
+        tabPro.classList.add('active'); tabSafe.classList.remove('active');
+        proPanel.classList.add('active'); safePanel.classList.remove('active');
+        updateVisuals();
+    };
 
-    tabSafe.onclick = () => selectMode('safe');
-    tabPro.onclick = () => selectMode('pro');
-    tabIR.onclick = () => selectMode('ir');
-
-    // --- Sliders Listeners ---
+    // --- Eventos de Slider ---
     safeSlider.oninput = updateVisuals;
     proHeadSlider.oninput = updateVisuals;
     proLoudSlider.oninput = updateVisuals;
-    irSlider.oninput = updateVisuals;
 
-    // --- Renderização Visual ---
+    // --- Atualiza Tela e Valores ---
     function updateVisuals() {
         let headMult = 1.0;
         let loudOffset = 0.0;
@@ -356,15 +304,11 @@
             document.getElementById('safeVal').textContent = (db > 0 ? "+" : "") + db.toFixed(1) + " dB";
             headMult = Math.pow(10, db / 20); 
             loudOffset = db;
-        } else if (currentMode === 'pro') {
+        } else {
             headMult = parseFloat(proHeadSlider.value);
             loudOffset = parseFloat(proLoudSlider.value);
             document.getElementById('proHeadVal').textContent = headMult.toFixed(1) + "x";
             document.getElementById('proLoudVal').textContent = (loudOffset > 0 ? "+" : "") + loudOffset.toFixed(1) + " dB";
-        } else if (currentMode === 'ir') {
-            const irDb = parseFloat(irSlider.value);
-            document.getElementById('irVal').textContent = (irDb > 0 ? "+" : "") + irDb.toFixed(1) + " dB";
-            return;
         }
 
         if (originalHeadScale !== null) {
@@ -392,40 +336,12 @@
         }
     }
 
-    // --- Processador de Download Final ---
-    document.getElementById('btnDownload').addEventListener('click', async () => {
-        
-        // Fluxo IR (.wav)
-        if (currentMode === 'ir') {
-            if (!rawAudioFile) return alert("Por favor, carregue um arquivo .wav de Impulse Response primeiro!");
-            
-            const arrayBuffer = await rawAudioFile.arrayBuffer();
-            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-            
-            const db = parseFloat(irSlider.value);
-            const gain = Math.pow(10, db / 20);
-            const channelData = audioBuffer.getChannelData(0); 
-            
-            for (let i = 0; i < channelData.length; i++) {
-                channelData[i] *= gain;
-            }
-            
-            const wavBuffer = audioBufferToWav(audioBuffer);
-            const blob = new Blob([wavBuffer], { type: 'audio/wav' });
-            
-            const cleanName = originalName.replace(/\.[^/.]+$/, "");
-            const dl = document.createElement('a');
-            dl.href = URL.createObjectURL(blob);
-            dl.download = `${cleanName}_${db > 0 ? "+" : ""}${db.toFixed(1)}dB.wav`;
-            document.body.appendChild(dl); dl.click(); dl.remove();
-            return;
-        }
-
-        // Fluxo original do .NAM
-        if (!rawJson) return alert("Por favor, carregue um arquivo .nam primeiro!");
+    // --- Exportação ---
+    document.getElementById('btnDownload').addEventListener('click', () => {
+        if (!rawJson) return;
 
         const exportJson = JSON.parse(JSON.stringify(rawJson));
+        
         let headMult = 1.0, loudOffset = 0.0, fileSuffix = "";
 
         if (currentMode === 'safe') {
@@ -457,7 +373,7 @@
 
         const cleanName = originalName.replace(/\.[^/.]+$/, "");
         const dl = document.createElement('a');
-        dl.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportJson));
+        dl.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportJson, null, 4));
         dl.download = `${cleanName}${fileSuffix}.nam`;
         document.body.appendChild(dl); dl.click(); dl.remove();
     });
