@@ -103,7 +103,7 @@
         #proPanel input[type=range] { accent-color: var(--danger); }
         #proPanel .val-display { color: var(--danger); }
 
-        /* NOVO: Estilo para o painel IR */
+        /* Estilo para o painel IR */
         #irPanel input[type=range] { accent-color: var(--success); }
         #irPanel .val-display { color: var(--success); }
 
@@ -119,7 +119,7 @@
         .btn-primary { background: var(--accent); color: #fff; }
         .btn-primary:hover { background: var(--accent-hover); }
 
-        /* NOVO: Estilo para o Botão de Reset Secundário */
+        /* Estilo para o Botão de Reset Secundário */
         .btn-secondary { background: #3f3f46; color: #fff; margin-top: 12px; }
         .btn-secondary:hover { background: #4f4f56; }
 
@@ -243,16 +243,13 @@
     let originalHeadScale = null;
     let originalLoudness = null;
 
-    window.addEventListener('dragover', (e) => e.preventDefault());
-    window.addEventListener('drop', (e) => e.preventDefault());
-
     function processFile(file) {
         if (!file) return;
         
         originalName = file.name;
         document.getElementById('uiFileName').textContent = originalName;
 
-        // Se for arquivo WAV (Impulse Response)
+        // Se for arquivo WAV
         if (originalName.toLowerCase().endsWith('.wav')) {
             rawAudioFile = file;
             rawJson = null;
@@ -262,7 +259,7 @@
             return;
         }
 
-        // Se for arquivo NAM/JSON (Sua lógica intocada)
+        // Se for arquivo NAM/JSON
         rawAudioFile = null;
         const reader = new FileReader();
         
@@ -270,7 +267,6 @@
             try {
                 rawJson = JSON.parse(ev.target.result);
                 
-                // Extrai valores originais inclusive se estiver em submodels
                 let target = rawJson.architecture === "WaveNet" ? rawJson : 
                              (rawJson.config && rawJson.config.submodels && rawJson.config.submodels[0].model ? rawJson.config.submodels[0].model : null);
                 
@@ -289,20 +285,35 @@
         reader.readAsText(file);
     }
 
+    // --- CORREÇÃO DO BUG: Manipulação limpa de clique e arraste ---
     dropzone.addEventListener('click', () => fileInput.click());
-    fileInput.addEventListener('change', (e) => processFile(e.target.files[0]));
+    fileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            processFile(e.target.files[0]);
+        }
+    });
 
-    dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('dragover'); });
-    dropzone.addEventListener('dragleave', (e) => { e.preventDefault(); dropzone.classList.remove('dragover'); });
+    dropzone.addEventListener('dragover', (e) => { 
+        e.preventDefault(); 
+        e.stopPropagation();
+        dropzone.classList.add('dragover'); 
+    });
+    
+    dropzone.addEventListener('dragleave', (e) => { 
+        e.preventDefault(); 
+        e.stopPropagation();
+        dropzone.classList.remove('dragover'); 
+    });
+    
     dropzone.addEventListener('drop', (e) => {
         e.preventDefault();
+        e.stopPropagation();
         dropzone.classList.remove('dragover');
-        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
             processFile(e.dataTransfer.files[0]);
         }
     });
 
-    // Lógica de alternância de abas
     function selectMode(mode) {
         currentMode = mode;
         [tabSafe, tabPro, tabIR].forEach(t => t.classList.remove('active'));
@@ -381,7 +392,7 @@
         }
     }
 
-    // --- NOVA FUNÇÃO: Botão de Reset/Voltar ---
+    // Botão de Reset/Voltar
     btnReset.addEventListener('click', () => {
         fileInput.value = "";
         rawJson = null; rawAudioFile = null; originalName = "";
@@ -398,10 +409,9 @@
         dropzone.style.display = 'block';
     });
 
-    // --- Exportação Final ---
+    // Exportação Final
     document.getElementById('btnDownload').addEventListener('click', async () => {
         
-        // Exportação de IR (.wav)
         if (currentMode === 'ir') {
             if (!rawAudioFile) return alert("Por favor, carregue um arquivo .wav primeiro!");
             const arrayBuffer = await rawAudioFile.arrayBuffer();
@@ -421,7 +431,6 @@
             return;
         }
 
-        // Exportação Inteligente de NAM
         if (!rawJson) return alert("Por favor, carregue um arquivo .nam primeiro!");
         const exportJson = JSON.parse(JSON.stringify(rawJson));
         let headMult = 1.0, loudOffset = 0.0, fileSuffix = "";
@@ -437,4 +446,28 @@
 
         const applyModifications = (block) => {
             if (block && block.config && typeof block.config.head_scale === 'number') block.config.head_scale *= headMult;
-            if (block && block.weights && Array.isArray(block.weights) && block.weights.length > 0) block.weights[block.weights
+            if (block && block.weights && Array.isArray(block.weights) && block.weights.length > 0) block.weights[block.weights.length - 1] *= headMult;
+        };
+
+        applyModifications(exportJson);
+        if (exportJson.metadata && typeof exportJson.metadata.loudness === 'number') exportJson.metadata.loudness += loudOffset;
+
+        if (exportJson.architecture === "SlimmableContainer" && exportJson.config && Array.isArray(exportJson.config.submodels)) {
+            exportJson.config.submodels.forEach(sub => {
+                if (sub && sub.model) {
+                    applyModifications(sub.model);
+                    if (sub.model.metadata && typeof sub.model.metadata.loudness === 'number') sub.model.metadata.loudness += loudOffset;
+                }
+            });
+        }
+
+        const cleanName = originalName.replace(/\.[^/.]+$/, "");
+        const dl = document.createElement('a');
+        dl.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportJson));
+        dl.download = `${cleanName}${fileSuffix}.nam`;
+        document.body.appendChild(dl); dl.click(); dl.remove();
+    });
+</script>
+
+</body>
+</html>
