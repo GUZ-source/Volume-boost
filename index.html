@@ -457,7 +457,7 @@
 
         const cleanName = originalName.replace(/\.[^/.]+$/, "");
         const dl = document.createElement('a');
-        dl.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportJson, null, 4));
+        dl.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportJson));
         dl.download = `${cleanName}${fileSuffix}.nam`;
         document.body.appendChild(dl); dl.click(); dl.remove();
     });
