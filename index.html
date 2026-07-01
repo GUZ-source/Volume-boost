@@ -87,6 +87,13 @@
         .panel.active { display: block; }
 
         .slider-group { margin-bottom: 20px; }
+        <div class="slider-group" style="margin-top: 15px;">
+    <label>Formato de Exportação:</label>
+    <select id="bitDepthSelect" style="width: 100%; padding: 8px; border-radius: 6px; background: #3f3f46; color: #fff; border: none; cursor: pointer;">
+        <option value="24">24-bit PCM (Recomendado para Pedais)</option>
+        <option value="32">32-bit Float (Máxima Dinâmica)</option>
+    </select>
+</div>
         .slider-group label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 12px; }
         .val-display { color: var(--accent); font-size: 1.2rem; font-weight: 800; font-variant-numeric: tabular-nums; }
         
@@ -411,7 +418,6 @@
 
     // Exportação Final
     document.getElementById('btnDownload').addEventListener('click', async () => {
-        
         if (currentMode === 'ir') {
             if (!rawAudioFile) return alert("Por favor, carregue um arquivo .wav primeiro!");
             const arrayBuffer = await rawAudioFile.arrayBuffer();
@@ -419,9 +425,18 @@
             const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
             const db = parseFloat(irSlider.value);
             const gain = Math.pow(10, db / 20);
-            const channelData = audioBuffer.getChannelData(0); 
-            for (let i = 0; i < channelData.length; i++) { channelData[i] *= gain; }
-            const wavBuffer = audioBufferToWav(audioBuffer);
+            
+            // CORREÇÃO 1: Varre todos os canais do IR (Mono ou Stereo)
+            for (let c = 0; c < audioBuffer.numberOfChannels; c++) {
+                const channelData = audioBuffer.getChannelData(c); 
+                for (let i = 0; i < channelData.length; i++) { 
+                    channelData[i] *= gain; 
+                }
+            }
+            
+            // CORREÇÃO 2: O segredo! Salva em 32-bit Float para permitir volume acima de 0dB
+            const wavBuffer = audioBufferToWav(audioBuffer, { float32: true });
+            
             const blob = new Blob([wavBuffer], { type: 'audio/wav' });
             const cleanName = originalName.replace(/\.[^/.]+$/, "");
             const dl = document.createElement('a');
